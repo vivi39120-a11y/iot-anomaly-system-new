@@ -1,0 +1,21 @@
+Threshold: 0.05
+Accuracy: 0.9941 (99.41%)
+
+Classification report:
+              precision    recall  f1-score   support
+
+      Normal     0.8103    0.9758    0.8854      5046
+      Attack     0.9994    0.9945    0.9970    210792
+
+    accuracy                         0.9941    215838
+   macro avg     0.9048    0.9852    0.9412    215838
+weighted avg     0.9950    0.9941    0.9944    215838
+
+Confusion matrix:
+[[  4924    122]
+ [  1153 209639]]
+ROC-AUC: 0.9991
+
+Confusion matrix 格式：
+[[正常判斷正常, 正常誤判攻擊],
+ [攻擊誤判正常, 攻擊判斷攻擊]]
