@@ -515,7 +515,7 @@ if st.button("開始監控演示", type="primary"):
             st.caption("橫軸：測試筆數｜縱軸：累積事件數量")
 
         with rank_placeholder.container():
-            st.markdown("### 已確認攻擊類型排行（排除 BenignTraffic）")
+            st.markdown("### 已確認攻擊類型排行 ")
             if attack_type_counter:
                 rank_df = pd.DataFrame([{"攻擊類型": k, "次數": v} for k, v in attack_type_counter.items()]).sort_values("次數", ascending=False).reset_index(drop=True)
                 st.dataframe(rank_df, use_container_width=True, hide_index=True)
