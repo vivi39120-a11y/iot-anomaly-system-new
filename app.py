@@ -418,24 +418,6 @@ if page == "即時監控頁":
             ]).sort_values("次數", ascending=False).reset_index(drop=True)
 
             top_rank_df = rank_df.head(15).sort_values("次數", ascending=True)
-            fig_attack = px.bar(
-                top_rank_df,
-                x="次數",
-                y="攻擊類型",
-                orientation="h",
-                text_auto=True,
-                color="次數",
-                color_continuous_scale="Reds",
-            )
-            fig_attack.update_layout(
-                margin=dict(l=200, r=20, t=20, b=20),
-                yaxis={"title": ""},
-                xaxis={"title": "次數"},
-                showlegend=False,
-                coloraxis_showscale=False,
-                height=560,
-            )
-            st.plotly_chart(fig_attack, use_container_width=True)
             st.dataframe(rank_df, use_container_width=True, hide_index=True, height=360)
         else:
             st.info("本輪監控演示沒有已確認攻擊類型資料。")
@@ -472,9 +454,9 @@ elif page == "資料集與模型說明頁":
                 color_discrete_sequence=px.colors.qualitative.Pastel,
             )
             fig_pie.update_layout(
-                margin=dict(l=20, r=20, t=30, b=20),
+                margin=dict(l=20, r=20, t=40, b=180),
                 legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.05),
-                height=650,
+                height=900,
             )
             st.plotly_chart(fig_pie, use_container_width=True)
         else:
