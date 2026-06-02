@@ -53,7 +53,8 @@ source_options = {
 selected_source = st.sidebar.selectbox("展示資料來源", list(source_options.keys()))
 DATA_PATH = source_options[selected_source]
 
-sim_speed = st.sidebar.slider("每筆資料顯示間隔（秒）", 0.1, 2.0, 0.5)
+sim_speed = 0.5
+st.sidebar.info("每筆資料固定顯示間隔：0.5 秒")
 num_samples = st.sidebar.number_input("模擬筆數", min_value=5, max_value=100, value=20, step=1)
 sample_size = st.sidebar.number_input("展示資料筆數", min_value=1000, max_value=50000, value=10000, step=1000)
 
