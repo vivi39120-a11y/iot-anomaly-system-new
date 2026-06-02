@@ -45,7 +45,7 @@ except Exception as e:
 # -----------------------------
 st.sidebar.header("控制面板")
 
-page = st.sidebar.radio("頁面選擇", ["即時監控頁", "模型分析頁"], index=0)
+page = st.sidebar.radio("頁面選擇", ["即時監控頁", "模型分析頁", "資料集與模型說明頁"], index=0)
 
 SIM_SPEED = 0.5
 TREND_UPDATE_EVERY = 3
@@ -219,7 +219,7 @@ if not attack_pool:
 # -----------------------------
 if page == "即時監控頁":
     st.title("物聯網惡意流量偵測系統")
-    st.caption("即時監控頁：狀態卡片、最新事件、中高風險警示、風險趨勢")
+    st.caption("即時監控頁：狀態卡片、最新事件、中高風險警示")
     st.caption(f"模型：XGBoost + Isolation Forest ｜ 資料來源：{DATA_PATH.name}")
 
     summary_placeholder = st.empty()
@@ -229,9 +229,6 @@ if page == "即時監控頁":
         event_placeholder = st.empty()
     with right_col:
         alert_placeholder = st.empty()
-    trend_placeholder = st.empty()
-
-
     if st.button("開始監控演示", type="primary"):
         total_count = 0
         normal_count = 0
@@ -390,14 +387,19 @@ if page == "即時監控頁":
                     },
                 )
 
-            if total_count % TREND_UPDATE_EVERY == 0 or total_count == int(num_samples):
-                with trend_placeholder.container():
-                    st.markdown("### 風險趨勢")
-                    chart_df = pd.DataFrame(stats_history).set_index("step")
-                    st.line_chart(chart_df[["Normal", "Low", "Medium", "High"]])
-                    st.caption("橫軸：測試筆數｜縱軸：累積事件數量")
-
             time.sleep(sim_speed)
+
+        # 模擬結束後，將本輪結果存到 session_state。
+        # 切到「模型分析頁」時，攻擊類型統計會讀取這裡，而不是重新統計整份資料集。
+        st.session_state["last_attack_type_counter"] = attack_type_counter
+        st.session_state["last_stats_history"] = stats_history
+        st.session_state["last_simulation_summary"] = {
+            "總流量": total_count,
+            "正常": normal_count,
+            "低風險": low_count,
+            "中風險": medium_count,
+            "高風險": high_count,
+        }
     else:
         st.info("請在側邊欄設定模擬參數後，按下『開始監控演示』。")
         st.markdown("### 即時監控流程")
@@ -409,7 +411,65 @@ if page == "即時監控頁":
         )
 elif page == "模型分析頁":
     st.title("模型分析頁")
-    st.caption("模型分析頁：資料集分布、模型關鍵特徵、攻擊類型統計")
+    st.caption("模型分析頁：風險趨勢、攻擊類型統計")
+    st.caption("此頁只顯示上一輪『開始監控演示』的結果，不直接統計整份資料集。")
+
+    st.header("風險趨勢")
+    stats_history = st.session_state.get("last_stats_history", [])
+    if stats_history:
+        chart_df = pd.DataFrame(stats_history).set_index("step")
+        st.line_chart(chart_df[["Normal", "Low", "Medium", "High"]])
+        st.caption("橫軸：測試筆數｜縱軸：累積事件數量")
+    else:
+        st.info("目前還沒有上一輪監控演示的風險趨勢。請先到『即時監控頁』按下『開始監控演示』。")
+
+    st.divider()
+    st.header("攻擊類型統計")
+    st.caption("此區只統計上一輪『開始監控演示』中，模型判斷為 Attack 且原始標籤確認為攻擊的資料，不再統計整份資料集。")
+
+    attack_type_counter = st.session_state.get("last_attack_type_counter", {})
+    simulation_summary = st.session_state.get("last_simulation_summary")
+
+    if simulation_summary:
+        s1, s2, s3, s4, s5 = st.columns(5)
+        s1.metric("上一輪總流量", simulation_summary.get("總流量", 0))
+        s2.metric("正常", simulation_summary.get("正常", 0))
+        s3.metric("低風險", simulation_summary.get("低風險", 0))
+        s4.metric("中風險", simulation_summary.get("中風險", 0))
+        s5.metric("高風險", simulation_summary.get("高風險", 0))
+
+    if attack_type_counter:
+        rank_df = pd.DataFrame([
+            {"攻擊類型": k, "次數": v}
+            for k, v in attack_type_counter.items()
+        ]).sort_values("次數", ascending=False).reset_index(drop=True)
+
+        top_rank_df = rank_df.head(15).sort_values("次數", ascending=True)
+        fig_attack = px.bar(
+            top_rank_df,
+            x="次數",
+            y="攻擊類型",
+            orientation="h",
+            text_auto=True,
+            color="次數",
+            color_continuous_scale="Reds",
+        )
+        fig_attack.update_layout(
+            margin=dict(l=200, r=20, t=20, b=20),
+            yaxis={"title": ""},
+            xaxis={"title": "次數"},
+            showlegend=False,
+            coloraxis_showscale=False,
+            height=560,
+        )
+        st.plotly_chart(fig_attack, use_container_width=True)
+        st.dataframe(rank_df, use_container_width=True, hide_index=True, height=360)
+    else:
+        st.info("目前還沒有上一輪監控演示的攻擊類型統計。請先到『即時監控頁』按下『開始監控演示』。")
+
+elif page == "資料集與模型說明頁":
+    st.title("資料集與模型說明頁")
+    st.caption("資料集與模型說明頁：資料集流量分布、流量統計詳細資料、模型關鍵特徵")
     st.caption(f"資料來源：{DATA_PATH.name} ｜ 展示資料筆數：{len(display_df)}")
 
     # --- 第一層：資料集總覽 ---
@@ -539,35 +599,3 @@ elif page == "模型分析頁":
     else:
         st.info("目前的模型不支援顯示特徵重要度。")
 
-    st.divider()
-    st.header("攻擊類型統計")
-    label_series_for_rank = get_label_series(display_df)
-    if label_series_for_rank is not None:
-        attack_labels = label_series_for_rank[label_series_for_rank.apply(is_confirmed_attack_label)]
-        if not attack_labels.empty:
-            rank_df = attack_labels.value_counts().reset_index()
-            rank_df.columns = ["攻擊類型", "次數"]
-            top_rank_df = rank_df.head(15).sort_values("次數", ascending=True)
-            fig_attack = px.bar(
-                top_rank_df,
-                x="次數",
-                y="攻擊類型",
-                orientation="h",
-                text_auto=True,
-                color="次數",
-                color_continuous_scale="Reds",
-            )
-            fig_attack.update_layout(
-                margin=dict(l=200, r=20, t=20, b=20),
-                yaxis={"title": ""},
-                xaxis={"title": "次數"},
-                showlegend=False,
-                coloraxis_showscale=False,
-                height=560,
-            )
-            st.plotly_chart(fig_attack, use_container_width=True)
-            st.dataframe(rank_df, use_container_width=True, hide_index=True, height=360)
-        else:
-            st.info("目前展示資料中沒有可統計的攻擊類型。")
-    else:
-        st.info("找不到標籤欄位，無法統計攻擊類型。")
