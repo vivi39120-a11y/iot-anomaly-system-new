@@ -412,8 +412,6 @@ if page == "即時監控頁":
                         for k, v in attack_type_counter.items()
                     ]).sort_values("次數", ascending=False).reset_index(drop=True)
 
-                    chart_rank_df = rank_df.head(10).set_index("攻擊類型")
-                    st.bar_chart(chart_rank_df["次數"], height=300)
                     st.dataframe(rank_df, use_container_width=True, hide_index=True, height=220)
                 else:
                     st.info("目前尚未出現已確認攻擊類型資料。")
