@@ -229,6 +229,14 @@ if page == "即時監控頁":
         event_placeholder = st.empty()
     with right_col:
         alert_placeholder = st.empty()
+
+    st.divider()
+    analysis_col1, analysis_col2 = st.columns([1.3, 1])
+    with analysis_col1:
+        trend_placeholder = st.empty()
+    with analysis_col2:
+        attack_type_placeholder = st.empty()
+
     if st.button("開始監控演示", type="primary"):
         total_count = 0
         normal_count = 0
@@ -387,6 +395,29 @@ if page == "即時監控頁":
                     },
                 )
 
+            # 每跑一筆流量，就同步更新風險趨勢。
+            with trend_placeholder.container():
+                st.markdown("### 風險趨勢（隨即時流量更新）")
+                chart_df = pd.DataFrame(stats_history).set_index("step")
+                st.line_chart(chart_df[["Normal", "Low", "Medium", "High"]], height=300)
+                st.caption("橫軸：測試筆數｜縱軸：累積事件數量")
+
+            # 每跑一筆流量，就同步更新攻擊類型統計。
+            with attack_type_placeholder.container():
+                st.markdown("### 攻擊類型統計（隨即時流量更新）")
+                st.caption("只統計模型判斷為 Attack，且原始標籤確認為攻擊的資料。")
+                if attack_type_counter:
+                    rank_df = pd.DataFrame([
+                        {"攻擊類型": k, "次數": v}
+                        for k, v in attack_type_counter.items()
+                    ]).sort_values("次數", ascending=False).reset_index(drop=True)
+
+                    chart_rank_df = rank_df.head(10).set_index("攻擊類型")
+                    st.bar_chart(chart_rank_df["次數"], height=300)
+                    st.dataframe(rank_df, use_container_width=True, hide_index=True, height=220)
+                else:
+                    st.info("目前尚未出現已確認攻擊類型資料。")
+
             time.sleep(sim_speed)
 
         # 模擬結束後，將本輪結果存到 session_state。
@@ -401,26 +432,7 @@ if page == "即時監控頁":
             "高風險": high_count,
         }
 
-        # 模擬結束後才一次顯示分析結果，避免監控過程中持續重繪造成卡頓。
-        st.divider()
-        st.header("風險趨勢")
-        chart_df = pd.DataFrame(stats_history).set_index("step")
-        st.line_chart(chart_df[["Normal", "Low", "Medium", "High"]])
-        st.caption("橫軸：測試筆數｜縱軸：累積事件數量")
-
-        st.divider()
-        st.header("攻擊類型統計")
-        st.caption("此區只統計本輪『開始監控演示』中，模型判斷為 Attack 且原始標籤確認為攻擊的資料。")
-        if attack_type_counter:
-            rank_df = pd.DataFrame([
-                {"攻擊類型": k, "次數": v}
-                for k, v in attack_type_counter.items()
-            ]).sort_values("次數", ascending=False).reset_index(drop=True)
-
-            top_rank_df = rank_df.head(15).sort_values("次數", ascending=True)
-            st.dataframe(rank_df, use_container_width=True, hide_index=True, height=360)
-        else:
-            st.info("本輪監控演示沒有已確認攻擊類型資料。")
+        st.success("本輪監控演示完成。風險趨勢與攻擊類型統計已在上方完成即時更新。")
     else:
         st.info("請在側邊欄設定模擬參數後，按下『開始監控演示』。")
         st.markdown("### 即時監控流程")
@@ -561,4 +573,3 @@ elif page == "資料集與模型說明頁":
         st.caption("※ 數值越高代表特徵對模型判斷『攻擊/正常』的影響力越大。")
     else:
         st.info("目前的模型不支援顯示特徵重要度。")
-
